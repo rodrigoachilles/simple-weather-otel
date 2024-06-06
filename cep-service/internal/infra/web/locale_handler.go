@@ -6,6 +6,8 @@ import (
 	"github.com/rodrigoachilles/simple-weather-otel/cep-service/internal/dto"
 	"github.com/rodrigoachilles/simple-weather-otel/cep-service/internal/usecase"
 	"github.com/rodrigoachilles/simple-weather-otel/pkg/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"net/http"
 )
 
@@ -20,6 +22,14 @@ func NewLocaleHandler(localeFinder usecase.Finder) *LocaleHandler {
 }
 
 func (h *LocaleHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	carrier := propagation.HeaderCarrier(r.Header)
+	ctx := r.Context()
+	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
+
+	tracer := otel.Tracer("cep-service")
+	_, span := tracer.Start(ctx, "locale-handler")
+	defer span.End()
+
 	w.Header().Set("Content-Type", "application/json")
 
 	var input dto.LocaleInput
@@ -45,7 +55,7 @@ func (h *LocaleHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.localeFinder.Execute(input.Cep)
+	output, err := h.localeFinder.Execute(ctx, input.Cep)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)

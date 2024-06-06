@@ -19,6 +19,7 @@ const (
 )
 
 func TestLocaleFinder_Execute_Success(t *testing.T) {
+	mockContext := new(MockContext)
 	mockRoundTripper := new(MockRoundTripper)
 	mockClient := &http.Client{Transport: mockRoundTripper}
 
@@ -31,26 +32,28 @@ func TestLocaleFinder_Execute_Success(t *testing.T) {
 	}, nil)
 
 	finder := NewLocaleFinder(mockClient)
-	output, err := finder.Execute(mockCep)
+	output, err := finder.Execute(mockContext, mockCep)
 
 	assert.Nil(t, err)
 	assert.Equal(t, expectedOutput, output)
 }
 
 func TestLocaleFinder_Execute_HttpClientError(t *testing.T) {
+	mockContext := new(MockContext)
 	mockRoundTripper := new(MockRoundTripper)
 	mockClient := &http.Client{Transport: mockRoundTripper}
 
 	mockRoundTripper.On("RoundTrip", mock.AnythingOfType("*http.Request")).Return(nil, errors.New("mocked http client error"))
 
 	finder := NewLocaleFinder(mockClient)
-	_, err := finder.Execute(mockCep)
+	_, err := finder.Execute(mockContext, mockCep)
 
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "mocked http client error")
 }
 
 func TestLocaleFinder_Execute_InvalidResponse(t *testing.T) {
+	mockContext := new(MockContext)
 	mockRoundTripper := new(MockRoundTripper)
 	mockClient := &http.Client{Transport: mockRoundTripper}
 
@@ -62,7 +65,7 @@ func TestLocaleFinder_Execute_InvalidResponse(t *testing.T) {
 	}, nil)
 
 	finder := NewLocaleFinder(mockClient)
-	output, err := finder.Execute(mockInvalidCep)
+	output, err := finder.Execute(mockContext, mockInvalidCep)
 
 	assert.Nil(t, err)
 	assert.Equal(t, expectedOutput, output)

@@ -1,5 +1,7 @@
 package usecase
 
+import "context"
+
 type Finder interface {
-	Execute(query string) (interface{}, error)
+	Execute(ctx context.Context, query string) (interface{}, error)
 }

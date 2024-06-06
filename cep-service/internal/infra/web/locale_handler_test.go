@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/rodrigoachilles/simple-weather-otel/cep-service/internal/dto"
@@ -18,7 +19,7 @@ type MockLocaleFinder struct {
 	mock.Mock
 }
 
-func (m *MockLocaleFinder) Execute(cep string) (*dto.LocaleOutput, error) {
+func (m *MockLocaleFinder) Execute(ctx context.Context, cep string) (*dto.LocaleOutput, error) {
 	args := m.Called(cep)
 	if args.Get(0) != nil {
 		return args.Get(0).(*dto.LocaleOutput), args.Error(1)

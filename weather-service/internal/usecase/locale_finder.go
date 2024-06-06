@@ -2,15 +2,18 @@ package usecase
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/rodrigoachilles/simple-weather-otel/weather-service/internal/dto"
 	"github.com/rodrigoachilles/simple-weather/pkg/log"
+	"go.opentelemetry.io/otel"
 	"io"
 	"net/http"
+	"os"
 )
 
-const urlLocaleApi = "http://localhost:8080/"
+const urlLocaleApi = "http://%s%s/"
 
 type LocaleFinder struct {
 	httpClient *http.Client
@@ -20,7 +23,11 @@ func NewLocaleFinder(httpClient *http.Client) *LocaleFinder {
 	return &LocaleFinder{httpClient: httpClient}
 }
 
-func (l *LocaleFinder) Execute(cep string) (interface{}, error) {
+func (l *LocaleFinder) Execute(ctx context.Context, cep string) (interface{}, error) {
+	tracer := otel.Tracer("weather-service")
+	_, span := tracer.Start(ctx, "locale-finder-usecase")
+	defer span.End()
+
 	input := &dto.LocaleInput{
 		Cep: cep,
 	}
@@ -29,9 +36,19 @@ func (l *LocaleFinder) Execute(cep string) (interface{}, error) {
 		return nil, err
 	}
 
-	log.Logger.Debug().Msg(fmt.Sprintf("Calling api url: %s", urlLocaleApi))
+	cepServiceServerName := os.Getenv("CEP_SERVICE_SERVER_NAME")
+	if cepServiceServerName == "" {
+		cepServiceServerName = "localhost"
+	}
+	cepServiceServerPort := os.Getenv("CEP_SERVICE_SERVER_PORT")
+	if cepServiceServerPort == "" {
+		cepServiceServerPort = ":8080"
+	}
 
-	req, err := http.NewRequest(http.MethodPost, urlLocaleApi, bytes.NewBuffer(inputJson))
+	requestURL := fmt.Sprintf(urlLocaleApi, cepServiceServerName, cepServiceServerPort)
+	log.Logger.Debug().Msg(fmt.Sprintf("Calling api url: %s", requestURL))
+
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBuffer(inputJson))
 	if err != nil {
 		return nil, err
 	}

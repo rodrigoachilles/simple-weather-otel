@@ -1,10 +1,12 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/rodrigoachilles/simple-weather-otel/cep-service/internal/dto"
 	"github.com/rodrigoachilles/simple-weather/pkg/log"
+	"go.opentelemetry.io/otel"
 	"io"
 	"net/http"
 )
@@ -19,7 +21,11 @@ func NewLocaleFinder(httpClient *http.Client) *LocaleFinder {
 	return &LocaleFinder{httpClient: httpClient}
 }
 
-func (l *LocaleFinder) Execute(cep string) (*dto.LocaleOutput, error) {
+func (l *LocaleFinder) Execute(ctx context.Context, cep string) (*dto.LocaleOutput, error) {
+	tracer := otel.Tracer("cep-service")
+	_, span := tracer.Start(ctx, "locale-finder-usecase")
+	defer span.End()
+
 	requestURL := fmt.Sprintf(urlViacepApi, cep)
 
 	log.Logger.Debug().Msg(fmt.Sprintf("Calling api url: %s", requestURL))

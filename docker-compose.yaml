@@ -1,0 +1,47 @@
+services:
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+
+  cep-service:
+    image: golang:latest
+    container_name: cep-service
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - CEP_SERVICE_SERVER_PORT=:8080
+    volumes:
+      - .:/app
+    command: >
+      sh -c "
+      cd /app &&
+      go mod tidy &&
+      go build -o ./build/cep-service ./cep-service/cmd/main.go &&
+      ./build/cep-service"
+    depends_on:
+      - zipkin
+
+  weather-service:
+    image: golang:latest
+    container_name: weather-service
+    ports:
+      - "8081:8081"
+    environment:
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - WEATHER_SERVICE_SERVER_PORT=:8081
+      - CEP_SERVICE_SERVER_NAME=cep-service
+      - CEP_SERVICE_SERVER_PORT=:8080
+      - KEY_WEATHER_API=???
+    volumes:
+      - .:/app
+    command: >
+      sh -c "
+      cd /app && 
+      go mod tidy &&
+      go build -o ./build/weather-service ./weather-service/cmd/main.go &&
+      ./build/weather-service"
+    depends_on:
+      - zipkin

@@ -6,6 +6,8 @@ import (
 	"github.com/rodrigoachilles/simple-weather-otel/weather-service/internal/dto"
 	"github.com/rodrigoachilles/simple-weather-otel/weather-service/internal/usecase"
 	"github.com/rodrigoachilles/simple-weather/pkg/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"net/http"
 )
 
@@ -22,6 +24,14 @@ func NewWeatherHandler(weatherFinder usecase.Finder, localeFinder usecase.Finder
 }
 
 func (h *WeatherHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	carrier := propagation.HeaderCarrier(r.Header)
+	ctx := r.Context()
+	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
+
+	tracer := otel.Tracer("weather-service")
+	_, span := tracer.Start(ctx, "weather-handler")
+	defer span.End()
+
 	w.Header().Set("Content-Type", "application/json")
 
 	cep := r.PathValue("cep")
@@ -34,7 +44,7 @@ func (h *WeatherHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	localeOutputRaw, err := h.localeFinder.Execute(cep)
+	localeOutputRaw, err := h.localeFinder.Execute(ctx, cep)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -55,7 +65,7 @@ func (h *WeatherHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	weatherOutputRaw, err := h.weatherFinder.Execute(localeOutput.Localidade)
+	weatherOutputRaw, err := h.weatherFinder.Execute(ctx, localeOutput.Localidade)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(err.Error())
 		if err.Error() == "API key is invalid or not provided" {
