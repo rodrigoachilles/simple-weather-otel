@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,7 +19,7 @@ type MockFinder struct {
 	mock.Mock
 }
 
-func (m *MockFinder) Execute(str string) (interface{}, error) {
+func (m *MockFinder) Execute(ctx context.Context, str string) (interface{}, error) {
 	args := m.Called(str)
 	if args.Get(0) != nil {
 		return args.Get(0).(interface{}), args.Error(1)
