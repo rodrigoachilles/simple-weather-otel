@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
-	"strings"
 )
 
 const (
@@ -36,8 +36,7 @@ func (w *WeatherFinder) Execute(ctx context.Context, cep string) (interface{}, e
 	if key == "" {
 		return nil, errors.New("API key is not provided")
 	}
-	requestURL := fmt.Sprintf(urlWeatherApi, key, cep)
-	requestURL = strings.Replace(requestURL, " ", "%20", -1)
+	requestURL := fmt.Sprintf(urlWeatherApi, key, url.QueryEscape(cep))
 
 	log.Logger.Debug().Msg(fmt.Sprintf("Calling api url: %s", requestURL))
 
@@ -45,15 +44,13 @@ func (w *WeatherFinder) Execute(ctx context.Context, cep string) (interface{}, e
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("content-type", "application/json")
+	req.Header.Set("Content-type", "application/json")
 
 	res, err := w.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusBadRequest {
-		return nil, errors.New("API key is invalid")
-	}
+
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
@@ -61,6 +58,14 @@ func (w *WeatherFinder) Execute(ctx context.Context, cep string) (interface{}, e
 	_ = res.Body.Close()
 
 	log.Logger.Debug().Msg(fmt.Sprintf("Response body: %s", string(body)))
+
+	if res.StatusCode == http.StatusUnauthorized {
+		return nil, errors.New("API key is invalid")
+	}
+
+	if res.StatusCode == http.StatusBadRequest {
+		return nil, errors.New("can not find zipcode")
+	}
 
 	var output dto.WeatherOutput
 	err = json.Unmarshal(body, &output)

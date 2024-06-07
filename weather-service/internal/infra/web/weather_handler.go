@@ -68,10 +68,19 @@ func (h *WeatherHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	weatherOutputRaw, err := h.weatherFinder.Execute(ctx, localeOutput.Localidade)
 	if err != nil {
 		log.Logger.Error().Err(err).Msg(err.Error())
-		if err.Error() == "API key is invalid or not provided" {
+		if err.Error() == "API key is invalid" || err.Error() == "API key is not provided" {
 			w.WriteHeader(http.StatusUnauthorized)
 			_ = json.NewEncoder(w).Encode(&dto.ErrorOutput{
 				StatusCode: http.StatusUnauthorized,
+				Message:    err.Error(),
+			})
+			return
+		}
+
+		if err.Error() == "can not find zipcode" {
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(&dto.ErrorOutput{
+				StatusCode: http.StatusNotFound,
 				Message:    err.Error(),
 			})
 			return

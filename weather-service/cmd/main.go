@@ -18,7 +18,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Logger.Fatal().Err(err)
+		log.Logger.Fatal().Err(err).Msg(err.Error())
 	}
 }
 
@@ -47,7 +47,7 @@ func run() (err error) {
 	}
 	srvErr := make(chan error, 1)
 	go func() {
-		log.Logger.Info().Msg(fmt.Sprintf("Starting server on port %s ...", serverPort[1:]))
+		log.Logger.Info().Msg(fmt.Sprintf("Starting server on port '%s'...", serverPort[1:]))
 		srvErr <- srv.ListenAndServe()
 	}()
 

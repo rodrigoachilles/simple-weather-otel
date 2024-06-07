@@ -52,7 +52,7 @@ func (l *LocaleFinder) Execute(ctx context.Context, cep string) (interface{}, er
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("content-type", "application/json")
+	req.Header.Set("Content-type", "application/json")
 	res, err := l.httpClient.Do(req)
 	if err != nil {
 		return nil, err
